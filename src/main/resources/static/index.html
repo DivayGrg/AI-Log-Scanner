@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Log Scanner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen p-8">
+<div class="max-w-4xl mx-auto">
+    <header class="mb-12 text-center">
+        <h1 class="text-4xl font-bold text-blue-400 mb-2">AI Log Scanner 🤖</h1>
+        <p class="text-gray-400 text-lg">Upload your Java logs and get instant AI diagnostics from Groq.</p>
+    </header>
+
+    <div class="bg-gray-800 p-8 rounded-xl border border-gray-700 shadow-2xl mb-8">
+        <div class="flex flex-col items-center justify-center border-2 border-dashed border-gray-600 rounded-lg p-10 hover:border-blue-500 transition-colors cursor-pointer" id="drop-zone">
+            <input type="file" id="logFile" class="hidden" accept=".log,.txt">
+            <p id="fileName" class="mb-4 text-gray-300">Drag & drop your .log file here or click to browse</p>
+            <button onclick="document.getElementById('logFile').click()" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-semibold transition">Select File</button>
+        </div>
+        <button onclick="uploadFile()" id="analyzeBtn" class="w-full mt-6 bg-green-600 hover:bg-green-700 py-3 rounded-lg font-bold text-xl hidden">🚀 Analyze Logs Now</button>
+    </div>
+
+    <div id="loading" class="hidden text-center text-xl animate-pulse">Analyzing with Llama 3 on Groq... ⚡</div>
+    <div id="results" class="space-y-4"></div>
+</div>
+
+<script>
+    const fileInput = document.getElementById('logFile');
+    const fileNameLabel = document.getElementById('fileName');
+    const analyzeBtn = document.getElementById('analyzeBtn');
+
+    fileInput.onchange = () => {
+        if (fileInput.files.length > 0) {
+            fileNameLabel.innerText = "Selected: " + fileInput.files[0].name;
+            analyzeBtn.classList.remove('hidden');
+        }
+    };
+
+    async function uploadFile() {
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const resultsDiv = document.getElementById('results');
+        const loading = document.getElementById('loading');
+
+        resultsDiv.innerHTML = "";
+        loading.classList.remove('hidden');
+        analyzeBtn.disabled = true;
+
+        try {
+            // Tumhara Backend API call
+            const response = await fetch('/api/logs/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            const data = await response.json();
+            loading.classList.add('hidden');
+
+            data.forEach(item => {
+                resultsDiv.innerHTML += `
+                        <div class="bg-gray-800 p-6 rounded-lg border-l-4 border-red-500 shadow-lg">
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="text-xl font-bold text-red-400">${item.errorType}</h3>
+                                <span class="bg-red-900 text-red-200 px-3 py-1 rounded-full text-sm font-bold">Count: ${item.count}</span>
+                            </div>
+                            <p class="text-gray-300 mb-4 italic"><span class="text-blue-400 font-bold">Cause:</span> ${item.explanation}</p>
+                            <div class="bg-gray-900 p-4 rounded border border-gray-700">
+                                <span class="text-green-400 font-bold">💡 Suggested Fix:</span>
+                                <p class="text-gray-200 mt-1">${item.suggestedFix}</p>
+                            </div>
+                        </div>
+                    `;
+            });
+        } catch (error) {
+            loading.innerText = "Error analyzing logs. Check console.";
+            console.error(error);
+        } finally {
+            analyzeBtn.disabled = false;
+        }
+    }
+</script>
+</body>
+</html>
